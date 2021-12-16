@@ -2,6 +2,7 @@
 import pyrealsense2.pyrealsense2 as rs
 import numpy as np
 import cv2
+from datetime import datetime
 
 # Создание и конфигурирование потока данных с rgb-кадрами
 pipeline = rs.pipeline()
@@ -21,6 +22,9 @@ while True:
         continue
     # Конвертирование rgb-кадра в numpy-массив
     color_image = np.asanyarray(color_frame.get_data())
+    # Наложение на изображение текущего системного времени
+    cv2.putText(color_image, datetime.now().strftime("%H:%M:%S:%f"), (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
     # Вывод numpy-массив изображения на рабочий стол
     cv2.imshow('RealSense', color_image)
     # Выход из цикла при нажатии на клавишу "Пробел"

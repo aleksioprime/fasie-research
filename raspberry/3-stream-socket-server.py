@@ -7,10 +7,10 @@ from datetime import datetime
 
 # Создание сокета
 server_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-# Привязка к сокету и его прослушка
+# Привязка сокета к ip-адресу и порту и его прослушка
 server_socket.bind(('0.0.0.0',9999))
 server_socket.listen(5)
-print("INFO: waiting connect")
+print("INFO: Waiting connect")
 
 # Создание и конфигурирование потока данных с rgb-кадрами
 pipeline = rs.pipeline()
@@ -20,7 +20,7 @@ config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 while True:
     # Ожидание подключения к сокету
     client_socket,addr = server_socket.accept()
-    print('INFO: connection', addr)
+    print('INFO: Connection', addr)
     # Старт потока данных с заданной конфигурацией
     pipeline.start(config)
     while True:
@@ -33,6 +33,7 @@ while True:
             continue
         # Конвертирование rgb-кадра в numpy-массив
         color_image = np.asanyarray(color_frame.get_data())
+        # Наложение на изображение текущего системного времени
         cv2.putText(color_image, datetime.now().strftime("%H:%M:%S:%f"), (10, 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         # Создание байтового представление данных изображения
@@ -43,9 +44,9 @@ while True:
             # отправка сообщения всем подключённым клиентам
             client_socket.sendall(message_image)
         except:
-            print("INFO: close stream", addr)
+            print("INFO: Close stream", addr)
             client_socket.close()
-            print("INFO: waiting connect")
+            print("INFO: Waiting connect")
             # Остановка потока данных
             pipeline.stop()
             break
