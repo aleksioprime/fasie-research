@@ -44,8 +44,8 @@ def filter_contours(contours):
         c = cv2.approxPolyDP(c, 0.04 * peri, True)
         x, y, w, h = cv2.boundingRect(c)
         area = cv2.contourArea(c)
-        if (w / h < 1.3 and w / h > 0.7) and (area > 3000 and area < 15000):
-            return x, y, w, h, area
+        if (w / h < 1.3 and w / h > 0.7) and (area > 4000 and area < 10000):
+            return c
 
 # Функция определения краёв объектов в кадре
 def edge_detector(img):
@@ -111,9 +111,11 @@ while True:
     # Сортировка массива с координатами контуров по убыванию
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
     # Выборка контуров заданных параметров
-    data_cnt = filter_contours(contours)  
-    if data_cnt is not None:
-        x, y, w, h, area = data_cnt
+    cnt = filter_contours(contours)  
+    if cnt is not None:
+        cv2.drawContours(masked_image, [cnt], -1, (0,0,255), 2)
+        x, y, w, h = cv2.boundingRect(cnt)
+        area = cv2.contourArea(cnt)
         cv2.rectangle(color_image, (x + cut_startx, y + cut_starty), (x + cut_startx + w, y + cut_starty + h), (0, 0, 255), 3)
         cv2.putText(color_image, "DETECTED", (cut_startx, cut_starty-5*fres),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)   
