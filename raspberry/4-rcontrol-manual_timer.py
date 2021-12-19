@@ -11,6 +11,18 @@ servo = Servo(17)
 servo.mid()
 time.sleep(1)
 
+# Функция коррекции данных оси геймпада для поворота сервопривода
+def correct_turn(value, minn, maxx):
+    if value > minn or value < -minn:
+        if value >= maxx:
+            return maxx
+        elif value <= -maxx:
+            return -maxx
+        else:
+            return value
+    else:
+        return 0
+
 # Установка таймера на 10 секунд и создание первой отметки времени
 timer = 10
 check_time = time.time()

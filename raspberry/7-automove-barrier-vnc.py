@@ -18,22 +18,22 @@ time.sleep(1)
 # Конфигурирование rgb и depth потоков
 pipeline = rs.pipeline()
 config = rs.config()
-config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 30)
-config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 30)
-# config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
-# config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
+# config.enable_stream(rs.stream.depth, 424, 240, rs.format.z16, 30)
+# config.enable_stream(rs.stream.color, 424, 240, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.depth, 848, 480, rs.format.z16, 30)
+config.enable_stream(rs.stream.color, 848, 480, rs.format.bgr8, 30)
 
 # старт потока с заданной конфигурацией
 profile = pipeline.start(config)
 # Настройка шкалы глубин и установка границы дальности области интереса
 depth_sensor = profile.get_device().first_depth_sensor()
 depth_scale = depth_sensor.get_depth_scale()
-end_dist = 0.4 / depth_scale # 40 сантиметров
+end_dist = 0.35 / depth_scale # 35 сантиметров
 # Создание объекта выравнивания по rgb-видеопотоку
 align = rs.align(rs.stream.color)
 # задание начальной и конечной координаты прямоугольника области интереса
-xmin_roi, ymin_roi, xmax_roi, ymax_roi = (130, 160, 400, 220)
-# xmin_roi, ymin_roi, xmax_roi, ymax_roi = (200, 320, 600, 420)
+# xmin_roi, ymin_roi, xmax_roi, ymax_roi = (180, 180, 320, 220)
+xmin_roi, ymin_roi, xmax_roi, ymax_roi = (360, 360, 640, 440)
 
 while True:
     # Получение набора кадров с rgb и depth потоков
@@ -61,14 +61,12 @@ while True:
     # перевод numpy-массива области интереса из 1-канального в 3-канальный и наложение на rgb-кадр
     color_image[ymin_roi:ymax_roi, xmin_roi:xmax_roi] = np.dstack((depth_removed, depth_removed, depth_removed))
     
-    # вывод на кадры границу области интереса и значение средней дальности её карты глубин 
-    cv2.rectangle(color_image, (xmin_roi, ymin_roi),
-                (xmax_roi, ymax_roi), (255, 255, 255), 2)
-    cv2.putText(color_image, "ROI mean distance: {:.3f}".format(mean_dist), (5, 15),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1) 
+    # вывод на кадры значение средней дальности карты глубин 
+    cv2.putText(color_image, "ROI mean distance: {:.3f}".format(mean_dist), (5, 25),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2) 
     
     # выполнение действий при определённо значении средней дальности карты глубин области интереса
-    if mean_dist <= 0.03:
+    if mean_dist <= 0.05:
         cv2.putText(color_image, "Drive Forward", (xmin_roi, ymin_roi-10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2) 
     else:
