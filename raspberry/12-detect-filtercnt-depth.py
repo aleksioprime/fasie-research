@@ -3,7 +3,6 @@ import pyrealsense2.pyrealsense2 as rs
 import numpy as np
 import cv2
 from datetime import datetime
-from imutils import paths
 
 # множитель разрешения для отступов
 fres = 2
@@ -37,28 +36,16 @@ img_black_3d = np.dstack((img_black,img_black,img_black))
 # Ядро для обработки маски области интереса
 kernel = np.ones((5, 5), 'uint8')
 
-# Подготовка шаблонов контуров для детектирования
-image_paths = list(paths.list_images("research/forms"))
-templates = []
-for (i, image_path) in enumerate(image_paths):
-    img_template = cv2.imread(image_path, 0)
-    ret, img_thresh = cv2.threshold(img_template, 127, 255, 0)
-    contours_temp, _ = cv2.findContours(img_thresh, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-    contour_temp = sorted(contours_temp, key=cv2.contourArea, reverse=True)[1]
-    templates.append(contour_temp)
-
-# Функция поиска контура по шаблону, отношения длины и ширины описывающего прямоугольника и его площади
-def find_template(contours, temp):
+# функция фильтрации контуров по площади 
+# и отношению длины и ширины описывающего прямоугольника
+def filter_contours(contours):
     for c in contours:
         peri = cv2.arcLength(c, True)
-        c = cv2.approxPolyDP(c, 0.01 * peri, True)
+        c = cv2.approxPolyDP(c, 0.04 * peri, True)
         x, y, w, h = cv2.boundingRect(c)
         area = cv2.contourArea(c)
-        for t in temp:
-            match = cv2.matchShapes(t, c, 2, 0)
-            if match < 0.1 and (area > 3500 and area < 9000) and (w / h < 1.3 and w / h > 0.7):
-                return c, t
-        return None, None
+        if (w / h < 1.3 and w / h > 0.7) and (area > 4000 and area < 10000):
+            return c
 
 # Функция определения краёв объектов в кадре
 def edge_detector(img):
@@ -124,10 +111,9 @@ while True:
     # Сортировка массива с координатами контуров по убыванию
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
     # Выборка контуров заданных параметров
-    cnt, tmp = find_template(sorted_contours, templates)
+    cnt = filter_contours(contours)  
     if cnt is not None:
         cv2.drawContours(masked_image, [cnt], -1, (0,0,255), 2)
-        cv2.drawContours(masked_image, [tmp // 4], -1, (0,255,255), 2)
         x, y, w, h = cv2.boundingRect(cnt)
         area = cv2.contourArea(cnt)
         cv2.rectangle(color_image, (x + cut_startx, y + cut_starty), (x + cut_startx + w, y + cut_starty + h), (0, 0, 255), 3)
@@ -147,20 +133,21 @@ while True:
     # Вычисление разницы между временем старта и текущим временем 
     delta_time = abs(datetime.now() - time_now).seconds
     # Наложение на изображение количества прошедших секунд
-    cv2.putText(color_image, "{}/20 sec".format(delta_time), (2*fres, 14*fres),
+    cv2.putText(color_image, "{}/30 sec".format(delta_time), (2*fres, 14*fres),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                     
     # Формирование составного кадра и вывод на экран
-    edged_image = np.dstack((edged_image, edged_image, edged_image))
-    test_image = np.hstack((edged_image, masked_image))
+    depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(cut_depth_image, alpha=0.1), cv2.COLORMAP_JET)
+    test_image = np.hstack((depth_colormap, masked_image))
     test_height = int(width_stream * test_image.shape[0] / test_image.shape[1])
     test_image = cv2.resize(test_image, (width_stream, test_height))
     cv2.imshow('RealSense', np.vstack((color_image, test_image)))
     # Вывод numpy-массив изображения на рабочий стол
     # cv2.imshow('RealSense', color_image)
     # Выход из цикла при нажатии на клавишу "Пробел" или по истечению заданного временм delta_time
-    if cv2.waitKey(1) == ord(' ') or delta_time >= 20:
+    if cv2.waitKey(1) == ord(' ') or delta_time >= 30:
         print("Detection accuracy:", round(count_detected / count_frames, 3))
+        print("FPS:", round(count_frames / delta_time, 2))
         break
 
 # Закрытие всех окон программы
